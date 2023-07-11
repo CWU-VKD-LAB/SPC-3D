@@ -1,0 +1,27 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel placeVectors
+
+struct VectorPoint
+{
+    int4 x1t4;
+    int4 x5t8;
+    int4 x9t12;
+    int4 x13t16;
+    int rowClass;
+};
+
+struct Vertex
+{
+    float3 pos;
+};
+
+StructuredBuffer<VectorPoint> vec;
+RWStructuredBuffer<Vertex> vrt;
+
+int highestVal;
+
+[numthreads(8,1,1)]
+void placeVectors (uint3 id : SV_DispatchThreadID)
+{
+    vrt[id.x].pos = id;
+}
