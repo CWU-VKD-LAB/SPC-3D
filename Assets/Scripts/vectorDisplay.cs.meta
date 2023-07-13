@@ -5,7 +5,7 @@ MonoImporter:
   serializedVersion: 2
   defaultReferences:
   - comp: {fileID: 7200000, guid: 504a519fbef040c4fbbf1c4cc26f418b, type: 3}
-  - mat: {instanceID: 0}
+  - mat: {fileID: 2100000, guid: 8903cfbac6ff35c42b305a3bc8148dc1, type: 2}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

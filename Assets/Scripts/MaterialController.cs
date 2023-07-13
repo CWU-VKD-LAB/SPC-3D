@@ -9,36 +9,21 @@ using System.Diagnostics;
 public class MaterialController : MonoBehaviour
 {
 
-    struct VectorPoint
+
+    struct Vertex
     {
-        int x1;
-        int x2;
-        int x3;
-        int x4;
-        int x5;
-        int x6;
-        int x7;
-        int x8;
-        int rowClass;
+        public Vector4 pos;
+        public Vector3 color;
     }
 
-    struct AVals
-    {
-        int x1;
-        int x2;
-        int x3;
-        int x4;
-        int x5;
-        int x6;
-        int x7;
-        int x8;
-    }
+    int vertexSize = sizeof(float) * 7;
+    int vertsPerVector;
+    Vertex[] vectorVertArr;
+    ComputeBuffer vectorVertBuff;
 
-    VectorPoint[] vectorsArray;
-    ComputeBuffer vectorBuff;
-
-    int highestVal;
-    int vectorPointSize = sizeof(int) * 9;
+    int vertsPerCoord = 6;
+    Vertex[] coordVertArr;
+    ComputeBuffer coordVertBuff;
 
     struct GLCLLine
     {
@@ -58,6 +43,8 @@ public class MaterialController : MonoBehaviour
     public GameObject prefabGLCL;
     public Material rulePlaneC1;
     public Material rulePlaneC2;
+    public Material vectorMat;
+    public Material coordMat;
 
     GameObject[] subCoordinateCubes;
 
@@ -66,16 +53,14 @@ public class MaterialController : MonoBehaviour
     //public Material pointMat;
     GameObject[] classLinePlanes;// = new GameObject[100];
     GameObject[] glclLinePlanes;
-    GameObject[] VectorArr;
     //public Text[] restOfFuncTexts;
     Material HeightPlane;
     //public Text fX;
 
 
     private ComputeBuffer[] glclBuffer;
-    private ComputeBuffer[] vectorBuffer;
     private Vector3 localOffset = new Vector3(2.5f, 2.836596f, 2.5f);
-    private Color[] classColors = { new Color(1, 0, 0, 1), new Color(0, 1, 0, 1), new Color(0.5f, 0.5f, 1, 1)};
+    private Vector3[] classColors = { new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(0.5f, 0.5f, 1)};
     private Color class2 = new Color(255, 0, 186, 255);
     private Color class1 = new Color(255, 255, 0, 255);
     private Color grey = new Color(0.2f, 0.2f, 0.2f, 0);
@@ -98,7 +83,6 @@ public class MaterialController : MonoBehaviour
 
     void Start()
     {
-
         int nProcessID = Process.GetCurrentProcess().Id;
         UnityEngine.Debug.Log("proc: " + nProcessID);
 
@@ -112,8 +96,8 @@ public class MaterialController : MonoBehaviour
         fxiParts = new float[ReadFileData.setCount][];
         int setCount = ReadFileData.setCount;
         PAIR_COORDS = Mathf.CeilToInt(ReadFileData.attribCount / 2);
+        vertsPerVector = PAIR_COORDS;
 
-        vectorBuffer = new ComputeBuffer[setCount];
         pointHeight = new float[PAIR_COORDS, 4];
         aVals = new float[ReadFileData.attribCount];
         normAVals = new float[ReadFileData.attribCount];
@@ -130,7 +114,6 @@ public class MaterialController : MonoBehaviour
         coordPointArr = new GameObject[setCount * PAIR_COORDS];// multiplied by two because it there are two subcoordinates for every 4 values (which makes up one xVal)
         classLinePlanes = new GameObject[setCount * PAIR_COORDS];
         attribContribPointArr = new GameObject[setCount * PAIR_COORDS];
-        VectorArr = new GameObject[PAIR_COORDS * setCount];
         GameObject[] tempPoints = new GameObject[setCount * PAIR_COORDS];
 
         int swapDir = 1;
@@ -152,7 +135,6 @@ public class MaterialController : MonoBehaviour
         int pointIndex = 0;
         for (int i = 0; i < setCount; i++)
         {
-            vectorBuffer[i] = new ComputeBuffer(PAIR_COORDS, sizeof(float) * 4);
             //tempPoints[i] = Instantiate(prefabPointFirstSubCoord, firstSubCoord.transform);
             //the two points: one in 1st sub coordinate, and one in the second
             for (int j = 0; j < PAIR_COORDS; j++)
@@ -166,38 +148,17 @@ public class MaterialController : MonoBehaviour
                 attribContribPointArr[pointIndex] = tempPoints[pointIndex].transform.GetChild(2).gameObject;
 
                 //setting the two classLinePlanes up
-                tempPoints[pointIndex].transform.GetChild(0).gameObject.GetComponent<MeshFilter>().mesh = mesh;
-
-                Renderer renderer = tempPoints[pointIndex].transform.GetChild(0).gameObject.GetComponent<Renderer>();
-                renderer.material = new Material(Shader.Find("Custom/coordinateLines"));
-                renderer.material.renderQueue = 3000;
-                renderer.material.SetFloat("_Transparency", 1f);
-
+                //tempPoints[pointIndex].transform.GetChild(0).gameObject.GetComponent<MeshFilter>().mesh = mesh;
 
                 classLinePlanes[pointIndex] = tempPoints[pointIndex].transform.GetChild(0).gameObject;
 
-
-                if (j != j - 1)
-                {
-                    GameObject vector = Instantiate(prefabVector);
-
-
-                    vector.gameObject.GetComponent<MeshFilter>().mesh = mesh;
-
-                    //setting the vector between two points up
-                    renderer = vector.gameObject.GetComponent<Renderer>();
-                    renderer.material = new Material(Shader.Find("Custom/vector"));
-                    renderer.material.SetColor("_Color", new Vector4(1, 1, 0, 1));
-
-                    VectorArr[pointIndex] = vector;
-                }
                 pointIndex++;
             }
         }
         visTogElements.attribContrib = attribContribPointArr;
         visTogElements.coordPlanes = classLinePlanes;
-        visTogElements.GLCLLines = glclLinePlanes;
-        visTogElements.vector = VectorArr;
+        //visTogElements.GLCLLines = glclLinePlanes;
+        //visTogElements.vector = VectorArr;
 
         updateCubes();
     }
@@ -256,11 +217,14 @@ public class MaterialController : MonoBehaviour
     {
         //for each class
         int addOldIndex = 0;
-        int vectorIndex = 0; ;
+        int vectorIndex = 0;
+        vectorVertArr = new Vertex[ReadFileData.setCount * PAIR_COORDS];
+        coordVertArr = new Vertex[ReadFileData.setCount * PAIR_COORDS * vertsPerCoord];
+
         //GLCLLine[,] GLCLArr = new GLCLLine[glclBuffer.Length,256];
         for (int i = 0; i < data.Length; i++)
         {
-            Color classColor = classColors[i];
+            Vector3 classColor = classColors[i];
             int curLocalIndex = 0;
             //for each set
             for (int j = 0; j < data[i].Length; j++)
@@ -269,41 +233,62 @@ public class MaterialController : MonoBehaviour
                 fxi[fxiIndex] = setFX(aVals, data, i, j);
                 fxiParts[fxiIndex] = setFXParts(aVals, data, i, j);
 
-                Material vec = VectorArr[vectorIndex].GetComponent<Renderer>().material;
-                vec.SetColor("_Color", classColor);
+                //Material vec = VectorArr[vectorIndex].GetComponent<Renderer>().material;
+                //vec.SetColor("_Color", classColor);
                 bool skipNextMat = false;
                 bool outsideRules = false;
                 //for each sub-coordinate
-                Vector4[] vecArr = new Vector4[PAIR_COORDS];
                 for (int k = 0; k < PAIR_COORDS; k++)
                 {
                     int pointIndex = addOldIndex + curLocalIndex;
                     coordPointArr[pointIndex].transform.localPosition = new Vector3((float)normPerAttribData[i][j][k * 2] * X_SCALE - xShift, (float)normPerAttribData[i][j][k * 2 + 1] * Y_SCALE - yShift, (float)(fxi[fxiIndex] * VALUE_TO_CUBE_FRAC_SCALE) - zShift);
-                    Vector3 currentCoord = coordPointArr[pointIndex].transform.localPosition;
-                   
+                    Vector3 currentCoordLocal = coordPointArr[pointIndex].transform.localPosition;
+                    Vector3 currentCoordGlobal = coordPointArr[pointIndex].transform.position;
+
                     //=============================GLCL=========================//
-                    Vector3 curCoordXY = new Vector3(currentCoord.x, currentCoord.y, 0);
+                    Vector3 curCoordXY = new Vector3(currentCoordLocal.x, currentCoordLocal.y, 0);
 
                     //===========================Vector=========================//
-                    vecArr[k] = coordPointArr[pointIndex].transform.position;//subCoordinateCubes[i].transform.localToWorldMatrix.MultiplyPoint(arr[arr.Length-1]);
+
+                    vectorVertArr[pointIndex].pos = currentCoordGlobal;
+                    vectorVertArr[pointIndex].color = classColor;
                     //=========================================================//
 
-                    Material point = coordPointArr[pointIndex].GetComponent<Renderer>().material;
+                    //Material point = coordPointArr[pointIndex].GetComponent<Renderer>().material;
 
-                    Material coordLines = classLinePlanes[pointIndex].GetComponent<Renderer>().material;
-
-                    setCoordPlane(coordLines, currentCoord, (float)(c * high_fx) * VALUE_TO_CUBE_FRAC_SCALE - 2.5f);
-
-                                  point.SetColor("_Color", classColor);//class 2
+                    setCoordPlane(currentCoordLocal, subCoordinateCubes[k], (float)(c * high_fx) * VALUE_TO_CUBE_FRAC_SCALE - 2.5f, pointIndex * vertsPerCoord);
 
                     curLocalIndex++;
                 }
-                vectorBuffer[vectorIndex].SetData(vecArr);
-                vec.SetBuffer("vecPos", vectorBuffer[vectorIndex]);
-                vectorIndex++;
+                
             }
             addOldIndex += curLocalIndex;
         }
+        DisplayData();
+    }
+
+    void DisplayData()
+    {
+        vectorVertBuff = new ComputeBuffer(vectorVertArr.Length, vertexSize);
+        vectorVertBuff.SetData(vectorVertArr);
+        vectorMat.SetBuffer("verti", vectorVertBuff);
+        vectorMat.SetInt("vertsPerVector", vertsPerVector);
+
+        coordVertBuff = new ComputeBuffer(coordVertArr.Length, vertexSize);
+        coordVertBuff.SetData(coordVertArr);
+        coordMat.SetBuffer("verti", coordVertBuff);
+        coordMat.SetInt("vertsPerVector", vertsPerCoord);
+
+    }
+
+    void OnRenderObject()
+    {
+        vectorMat.SetPass(0);
+        Graphics.DrawProceduralNow(MeshTopology.LineStrip, vertsPerVector, ReadFileData.setCount);
+
+        coordMat.SetPass(0);
+        Graphics.DrawProceduralNow(MeshTopology.LineStrip, vertsPerCoord, ReadFileData.setCount);
+
     }
 
     //calcultes f(x) based off "A" vector and "X" vector
@@ -380,15 +365,39 @@ public class MaterialController : MonoBehaviour
     }*/
 
     //sets the values for coordPlane shader
-    void setCoordPlane(Material lines, Vector3 pos, float C)
+    //need index for coord arr
+    void setCoordPlane(Vector3 pos, GameObject cube, float C, int index)
     {
         //The values, -2.5, and -2.84 properly set the lines within their subcoordinate
         //The addition/subtraction of 0.01 just allows for some offset of the coordlines so that they don't z-fight with other lines.
-        lines.SetVector("_Pos0", new Vector3(-xShift, pos.y, -zShift /*+ 0.01f*/));
-        lines.SetVector("_Pos1", new Vector3(pos.x /*- 0.01f*/, -yShift, -zShift /*+ 0.01f*/));
-        lines.SetVector("_Pos2", new Vector3(pos.x /*- 0.01f*/, pos.y, -zShift/*+ 0.01f*/));
-        lines.SetVector("_Pos3", new Vector3(pos.x, pos.y /*+ 0.01f*/, pos.z));
-        lines.SetVector("_C", new Vector3(pos.x, pos.y /*+ 0.01f*/, C));
+        Vector3 pos0 = new Vector3(-xShift, pos.y, -zShift /*+ 0.01f*/);
+        Vector3 pos1 = new Vector3(pos.x /*- 0.01f*/, -yShift, -zShift /*+ 0.01f*/);
+        Vector3 pos2 = new Vector3(pos.x /*- 0.01f*/, pos.y, -zShift/*+ 0.01f*/);
+        Vector3 pos3 = new Vector3(pos.x, pos.y /*+ 0.01f*/, pos.z);
+        Vector3 CPlane = new Vector3(pos.x, pos.y /*+ 0.01f*/, C);
+
+        pos0 = cube.transform.localToWorldMatrix.MultiplyPoint(pos0);
+        pos1 = cube.transform.localToWorldMatrix.MultiplyPoint(pos1);
+        pos2 = cube.transform.localToWorldMatrix.MultiplyPoint(pos2);
+        pos3 = cube.transform.localToWorldMatrix.MultiplyPoint(pos3);
+
+        //red line
+        coordVertArr[index].pos = pos0;
+        coordVertArr[index].color = new Vector3(1f,0f,0f);
+        coordVertArr[index + 1].pos = pos2;
+        coordVertArr[index + 1].color = new Vector3(1f, 0f, 0f);
+
+        //green line
+        coordVertArr[index + 2].pos = pos1;
+        coordVertArr[index + 2].color = new Vector3(0f, 1f, 0f);
+        coordVertArr[index + 3].pos = pos2;
+        coordVertArr[index + 3].color = new Vector3(0f, 1f, 0f);
+
+        //blue line
+        coordVertArr[index + 4].pos = pos2;
+        coordVertArr[index + 4].color = new Vector3(0.76f, 0.76f, 0.76f);
+        coordVertArr[index + 5].pos = pos3;
+        coordVertArr[index + 5].color = new Vector3(0.76f, 0.76f, 0.76f);
     }
 
     float[][][] normalize(float[][][] x)

@@ -13,23 +13,23 @@ public class vectorDisplay : MonoBehaviour
 
     struct VectorPoint
     {
-        public int x1;
-        public int x2;
-        public int x3;
-        public int x4;
-        public int x5;
-        public int x6;
-        public int x7;
-        public int x8;
-        public int x9;
-        public int x10;
-        public int x11;
-        public int x12;
-        public int x13;
-        public int x14;
-        public int x15;
-        public int x16;
-        public int rowClass;
+        public float x1;
+        public float x2;
+        public float x3;
+        public float x4;
+        public float x5;
+        public float x6;
+        public float x7;
+        public float x8;
+        public float x9;
+        public float x10;
+        public float x11;
+        public float x12;
+        public float x13;
+        public float x14;
+        public float x15;
+        public float x16;
+        public float rowClass;
     }
 
     struct AVals
@@ -61,6 +61,9 @@ public class vectorDisplay : MonoBehaviour
         data = ReadFileData.data;
         setCount = ReadFileData.setCount;
         vecHandle = comp.FindKernel("placeVectors");
+
+        data = normalize(data);
+
         init();
     }
 
@@ -157,12 +160,33 @@ public class vectorDisplay : MonoBehaviour
         mat.SetBuffer("verti", vertexBuff);
     }
 
+    float[][][] normalize(float[][][] x)
+    {
+        float[][][] normArr = new float[x.Length][][];
+
+        float[] maxs = ReadFileData.maxAttribNums;
+
+        for (int i = 0; i < normArr.Length; i++)
+        {
+            normArr[i] = new float[x[i].Length][];
+            for (int j = 0; j < normArr[i].Length; j++)
+            {
+                normArr[i][j] = new float[x[i][j].Length];
+                for (int k = 0; k < normArr[i][j].Length; k++)
+                {
+                    normArr[i][j][k] = x[i][j][k] / maxs[k];
+                }
+            }
+        }
+        return normArr;
+    }
+
     void OnRenderObject()
     {
         mat.SetPass(0);
         //here could be an issue
                                              //.Lines      8
-        Graphics.DrawProceduralNow(MeshTopology.Lines, 8, setCount);
+        Graphics.DrawProceduralNow(MeshTopology.LineStrip, 8, setCount);
     }
 
     private void OnDestroy()

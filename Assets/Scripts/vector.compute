@@ -20,6 +20,13 @@ RWStructuredBuffer<Vertex> vrt;
 
 int highestVal;
 
+static float X_SCALE = 5;
+static float Y_SCALE = 5;
+static float xShift = 2.5f;
+static float yShift = 2.836596f;
+static float zShift = 2.5f;
+
+
 [numthreads(8,1,1)]
 void placeVectors (uint3 id : SV_DispatchThreadID)
 {

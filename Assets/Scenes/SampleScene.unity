@@ -3284,6 +3284,8 @@ MonoBehaviour:
   prefabGLCL: {fileID: 1951562669582104201, guid: 5df4d52712ff6c1458bdcd1554ee612f, type: 3}
   rulePlaneC1: {fileID: 2100000, guid: e220000759dfc0949ab33dc81ffd2323, type: 2}
   rulePlaneC2: {fileID: 2100000, guid: 6da53347cd750e04c86086f8c8a13e0b, type: 2}
+  vectorMat: {fileID: 2100000, guid: 8903cfbac6ff35c42b305a3bc8148dc1, type: 2}
+  coordMat: {fileID: 2100000, guid: 1036b0dfb32dfdb40955fd9d5540fca6, type: 2}
 --- !u!4 &529315416
 Transform:
   m_ObjectHideFlags: 0
