@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7682521345298181380
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7682521345298181386}
+  - component: {fileID: 7682521345298181387}
+  - component: {fileID: 7682521345298181381}
+  m_Layer: 0
+  m_Name: MaterialController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7682521345298181386
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7682521345298181380}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -9.488281, y: 3.9207764, z: 1.1125379}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7682521345298181387
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7682521345298181380}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f05afa87fc1ba54ebbe325da65f685b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &7682521345298181381
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7682521345298181380}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 745f139337b8c5f489426c9eff9f0cfc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  visTogElements: {fileID: 0}
+  prefabPoint: {fileID: 6514902219626556243, guid: 1c63733f549431543b9284d6bf90bd69, type: 3}
+  prefabVector: {fileID: 188494252798842215, guid: 675720cb343bc0e47aaf068f11ab872e, type: 3}
+  prefabSubCoord: {fileID: 8710569079979090790, guid: 120372e0af8b612409756f2abd72e8af, type: 3}
+  prefabGLCL: {fileID: 1951562669582104201, guid: 5df4d52712ff6c1458bdcd1554ee612f, type: 3}
+  rulePlaneC1: {fileID: 2100000, guid: e220000759dfc0949ab33dc81ffd2323, type: 2}
+  rulePlaneC2: {fileID: 2100000, guid: 6da53347cd750e04c86086f8c8a13e0b, type: 2}
+  vectorMat: {fileID: 2100000, guid: 8903cfbac6ff35c42b305a3bc8148dc1, type: 2}
+  coordMat: {fileID: 2100000, guid: 1036b0dfb32dfdb40955fd9d5540fca6, type: 2}
+  glclMat: {fileID: 2100000, guid: 8b11fe2c6dc774e408cfe8a85c1575f7, type: 2}
+  order: 

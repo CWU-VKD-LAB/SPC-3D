@@ -7,8 +7,6 @@ using System.Diagnostics;
 
 public class ReadFileData : MonoBehaviour
 {
-
-    
     //public float[] xVals;
     string myFilePath, fileName;
     //Number of elements in each class
@@ -33,20 +31,58 @@ public class ReadFileData : MonoBehaviour
 
     // Start is called before the first frame update
     void Awake()
-    {
-        //eventually will be used retrieved
-        fileName = "brstCncrModShort.csv";
-        //myFilePath = Application.dataPath + "/FileData/" + fileName;
-        myFilePath = "C:\\Users\\infer\\Desktop\\Github2\\SPC-3D\\Assets\\FileData\\" + fileName;
-        UnityEngine.Debug.Log(myFilePath);
-        int nProcessID = Process.GetCurrentProcess().Id;
-        UnityEngine.Debug.Log("proc: " + nProcessID);
-        ReadFromTheFile();
+    { 
+        ////eventually will be user retrieved
+        //fileName = "SimpleMushroomDataReal.csv";
+        ////myFilePath = Application.dataPath + "/FileData/" + fileName;
+        //myFilePath = "C:\\Users\\infer\\Desktop\\Github2\\SPC-3D\\Assets\\FileData\\" + fileName;
+        //init(myFilePath);
+
+        init("");
     }
 
-    void ReadFromTheFile()
+    public void init(string path)
     {
-        string[] rows = File.ReadAllLines(myFilePath);
+        UnityEngine.Debug.Log(path);
+        classCount = 0;
+        classNum.Clear();
+        setCount = 0;
+        attribCount = 0;
+        if (path == "")
+        {
+            classCount = 3;
+            classNum.Clear();
+            setCount = 15;
+            attribCount = 6;
+            maxAttribNums = new float[attribCount];
+
+            data = new float[3][][];
+            int count = 0;
+            for (int i = 0; i < data.Length; i++)
+            {
+                data[i] = new float[5][];
+                for (int j = 0; j < data[i].Length; j++)
+                {
+                    data[i][j] = new float[6];
+                    for (int k = 0; k < data[i][j].Length; k++)
+                    {
+                        data[i][j][k] = i * j * k + 1;
+                        if (data[i][j][k] > maxAttribNums[k])
+                        {
+                            maxAttribNums[k] = data[i][j][k];
+                        }
+                    }
+                    count++;
+                }
+            }
+            return;
+        }
+        ReadFromTheFile(path);
+    }
+
+    void ReadFromTheFile(string path)
+    {
+        string[] rows = File.ReadAllLines(path);
         int dataColumns = rows[0].Split(',').Length;
         attribCount = dataColumns - 1; // "-1" to account for the class column, which is not an attribute
         setCount = rows.Length - 1;//TEMP
@@ -88,27 +124,6 @@ public class ReadFileData : MonoBehaviour
                 count++;
             }
         }
-        //setosa = new float[setosaCount, 4];
-        //versicolor = new float[versiCount, 4];
-        //virginica = new float[virgCount, 4];
-
-        ////looks through every line
-        //for (int i = 0; i < rows.Length; i++)
-        //{
-        //    numberString[i] = rows[i].Split(',');
-        //    //changes string to float values
-        //    if (rows[i].Contains("setosa"))
-        //    {
-        //        setosa = seperateIntoIrisArrays(numberString, setosa, i, 0, "setosa");
-        //    }
-        //    else if (rows[i].Contains("versicolor"))
-        //    {
-        //        versicolor = seperateIntoIrisArrays(numberString, versicolor, i, setosaCount, "versicolor");
-        //    }
-        //    else if (rows[i].Contains("virginica"))
-        //    {
-        //        virginica = seperateIntoIrisArrays(numberString, virginica, i, versiCount + setosaCount, "virginica");
-        //    }
-        //}
     }
+
 }

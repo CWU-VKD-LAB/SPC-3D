@@ -7,8 +7,8 @@ Shader "Custom/vectorCompute"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
-        LOD 100
+        Tags { "Queue" = "Transparent" }
+        Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
         {
@@ -27,7 +27,7 @@ Shader "Custom/vectorCompute"
             struct v2f
             {
                 float4 pos : SV_POSITION;
-                float3 color : TEXCOORD0;
+                float4 color : TEXCOORD0;
             };
 
             struct vertex
@@ -39,6 +39,8 @@ Shader "Custom/vectorCompute"
             StructuredBuffer<vertex> verti;
 
             int vertsPerVector;
+            int disabled = 0;
+            float transparency = 1;
 
             v2f vert (uint vID : SV_VertexID, uint id : SV_InstanceID)
             {
@@ -46,15 +48,16 @@ Shader "Custom/vectorCompute"
                 int index = id * vertsPerVector + vID;
                 float4 posi = mul(UNITY_MATRIX_VP, float4(verti[index].pos.xyz,1)); //all vectors at origin
                 //posi -= 10;
-                o.pos = posi;
-                o.color = verti[index].color;
+                o.pos = disabled == 0 ? posi : posi - 10;
+                o.color = disabled == 0 ? float4(verti[index].color, transparency) : 0;
+                //o.color = float4(verti[index].color, 1);
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
                 // sample the texture
-                fixed4 col = float4(i.color,1);
+                fixed4 col = i.color;
                 return col;
             }
             ENDCG

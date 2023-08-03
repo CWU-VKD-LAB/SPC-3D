@@ -5,10 +5,10 @@ using UnityEngine;
 //Takes in toggles to hide or show given visuals
 public class VisualToggleController : MonoBehaviour
 {
-    public GameObject[] GLCLLines;
-    public GameObject[] vector;
-    public GameObject[] coordPlanes;
-    public GameObject[] attribContrib;
+    public Material GLCLMat;
+    public Material vectorMat;
+    public Material coordMat;
+    public Material attribContribMat;
 
     private bool GLCLToggle = true;
     private bool vectorToggle = true;
@@ -19,38 +19,30 @@ public class VisualToggleController : MonoBehaviour
     public void setAttribContrib()
     {
         attribContribToggle = !attribContribToggle;
-        for(int i = 0; i < attribContrib.Length; i++)
-        {
-            attribContrib[i].SetActive(attribContribToggle);
-        }
+        int disabled = attribContribToggle ? 0 : 1;
+        attribContribMat.SetInt("disabled", disabled);
     }
 
     //connecting line between subcoordinate points
     public void setVector()
     {
         vectorToggle = !vectorToggle;
-        for (int i = 0; i < vector.Length; i++)
-        {
-            vector[i].SetActive(vectorToggle);
-        }
+        int disabled = vectorToggle ? 0 : 1;
+        vectorMat.SetInt("disabled", disabled);
     }
     //rbg coordinates for point
     public void setCoord()
     {
         coordToggle = !coordToggle;
-        for(int i = 0; i < coordPlanes.Length; i++)
-        {
-            coordPlanes[i].SetActive(coordToggle);
-        }
+        int disabled = coordToggle ? 0 : 1;
+        coordMat.SetInt("disabled", disabled);
     }
 
     //GLCL points
     public void setGLCL()
     {
         GLCLToggle = !GLCLToggle;
-        for (int i = 0; i < GLCLLines.Length; i++)
-        {
-            GLCLLines[i].SetActive(GLCLToggle);
-        }
+        int disabled = GLCLToggle ? 0 : 1;
+        GLCLMat.SetInt("disabled", disabled);
     }
 }
