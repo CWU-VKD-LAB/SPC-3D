@@ -158,10 +158,7 @@ public class MaterialController : MonoBehaviour
                 pointIndex++;
             }
         }
-        //visTogElements.attribContrib = attribContribPointArr;
-        //visTogElements.coordPlanes = classLinePlanes;
-        //visTogElements.GLCLLines = glclLinePlanes;
-        //visTogElements.vector = VectorArr;
+        visTogElements.cubes = subCoordinateCubes;
 
         updateCubes();
     }
@@ -270,9 +267,6 @@ public class MaterialController : MonoBehaviour
         Graphics.DrawProceduralNow(MeshTopology.LineStrip, vertsPerGLCLLine, ReadFileData.setCount * PAIR_COORDS);
     }
 
-    //calcultes f(x) based off "A" vector and "X" vector
-    //will have to create dynamic "a" index. 
-    //have to add the cubes like below
     void setGLCLLines(GameObject cube, Vector3 curCoordXY, int index, Vector3 classColor, int dataI, int dataJ, Vector3 finalPoint)
     {
         glclVertArr[index].color = classColor;
@@ -288,10 +282,10 @@ public class MaterialController : MonoBehaviour
 
     Vector3 setGLCLPoint( Vector3 endP, float data, float aval, float normAval)
     {
-        float height = (float)(aval * data * VALUE_TO_CUBE_FRAC_SCALE);
+        float height = (float)(aval * data);
         float topRAngle = Mathf.Acos(normAval);
-        float bottomLength = data * VALUE_TO_CUBE_FRAC_SCALE * Mathf.Sin(topRAngle);
-        endP += new Vector3(bottomLength, height, 0);
+        float bottomLength = data * Mathf.Sin(topRAngle);
+        endP += new Vector3(bottomLength, height, 0) * (VALUE_TO_CUBE_FRAC_SCALE * 1.225962f); //1.225962 is the scale of the cubes
 
         return endP;
     }

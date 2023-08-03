@@ -9,18 +9,21 @@ public class VisualToggleController : MonoBehaviour
     public Material vectorMat;
     public Material coordMat;
     public Material attribContribMat;
+    public GameObject[] cubes; 
 
     private bool GLCLToggle = true;
     private bool vectorToggle = true;
     private bool coordToggle = true;
-    private bool attribContribToggle = true;
+    private bool cubeToggle = true;
 
     //attribContribPointsBeneathEachPlane
-    public void setAttribContrib()
+    public void setCubeToggle()
     {
-        attribContribToggle = !attribContribToggle;
-        int disabled = attribContribToggle ? 0 : 1;
-        attribContribMat.SetInt("disabled", disabled);
+        cubeToggle = !cubeToggle;
+        foreach(GameObject i in cubes)
+        {
+            i.SetActive(cubeToggle);
+        }
     }
 
     //connecting line between subcoordinate points
