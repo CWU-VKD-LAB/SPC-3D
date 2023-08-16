@@ -35,8 +35,8 @@ public class resetScene : MonoBehaviour
         foreach (GameObject cube in cubes)
             Destroy(cube);
         controller.cubesPerRow = cubeCount;
-        controller.init(false);
         valueUpdater.updateVals();
+        controller.init(false);
     }
 
     public void resetSceneData()
@@ -60,5 +60,6 @@ public class resetScene : MonoBehaviour
         controller.init(true);
         valueUpdater.init();
         valueUpdater.updateVals();
+        //resetSceneVisual();
     }
 }

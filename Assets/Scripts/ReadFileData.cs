@@ -50,6 +50,7 @@ public class ReadFileData : MonoBehaviour
         attribCount = 0;
         if (path == "")
         {
+            //a dumby test data which shows if no other data is selected
             classCount = 3;
             classNum.Clear();
             setCount = 15;
@@ -85,10 +86,11 @@ public class ReadFileData : MonoBehaviour
         string[] rows = File.ReadAllLines(path);
         int dataColumns = rows[0].Split(',').Length;
         attribCount = dataColumns - 1; // "-1" to account for the class column, which is not an attribute
-        setCount = rows.Length - 1;//TEMP
+        setCount = rows.Length - 1;//See if the -1 is necessary
         string[][] numberString = new string[setCount][];
         maxAttribNums = new float[attribCount];
         List<string> classNames = new List<string>();
+        //define classes
         for (int i = 0; i < setCount; i++)
         {
             numberString[i] = rows[i].Split(',');
@@ -105,20 +107,52 @@ public class ReadFileData : MonoBehaviour
             }
         }
 
+        //make stringDataArray
+        string[][][] stringData = new string[classCount][][];
+
+        for (int i = 0; i < classCount; i++)
+        {
+            stringData[i] = new string[classNum[classNames[i]]][];
+            for(int j = 0; j < classNum[classNames[i]]; j++)
+            {
+                stringData[i][j] = new string[attribCount];
+            }
+        }
+
+        //fill String DataArray
+        int[] classesCount = new int[classCount];
+        for (int i = 0; i < setCount; i++)
+        {
+            string className = numberString[i][dataColumns - 1];
+
+            int index = classNames.IndexOf(className);
+
+            stringData[index][classesCount[index]] = numberString[i];
+            classesCount[index]++;
+    }
+
+
         data = new float[classCount][][];
         int count = 0;
+        //class
         for(int i = 0; i < data.Length; i++)
         {
             data[i] = new float[classNum[classNames[i]]][];
+            //set
             for (int j = 0; j < data[i].Length; j++)
             {
                 data[i][j] = new float[attribCount];
+                //attributes
                 for (int k = 0; k < data[i][j].Length; k++)
                 {
-                    float.TryParse(numberString[count][k], out data[i][j][k]);
+                    float.TryParse(stringData[i][j][k], out data[i][j][k]);
                     if (data[i][j][k] > maxAttribNums[k])
                     {
                         maxAttribNums[k] = data[i][j][k];
+                    }
+                    if(i == 1 & k == 4 && data[i][j][k] == 3)
+                    {
+                        UnityEngine.Debug.Log("found a 3 in the second class");
                     }
                 }
                 count++;

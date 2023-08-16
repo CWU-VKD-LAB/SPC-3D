@@ -28,9 +28,9 @@ public class MaterialController : MonoBehaviour
     Vertex[] glclVertArr;
     ComputeBuffer glclVertBuff;
 
+    private string userRule = "";
     private int PAIR_COORDS; //The number of subcoordinates
     private float high_fx = 0;
-    private float VALUE_TO_CUBE_FRAC_SCALE; //cubeLengthWidth (always 5 unless scaled in editor) / maximum point height
     private const float X_SCALE = 5;
     private const float Y_SCALE = 5;
     public VisualToggleController visTogElements;
@@ -60,6 +60,7 @@ public class MaterialController : MonoBehaviour
     private float[] fxi;// = new float[50];//f(x) input
     private float[][] fxiParts;// = new float[50][];
     private float[][][] data; //= new float [50,4];
+    private float[][][] filteredData;
     //data normalized by column
     private float[][][] normPerAttribData;// = new float[50,4];
     private float[] aVals;// = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -70,10 +71,14 @@ public class MaterialController : MonoBehaviour
     private float[,] pointHeight;// = new float[100, 100];
     public int[] order;
     public int cubesPerRow = 3;
+    
+    float[] cubeScales;
 
     float xShift = 2.5f;
     float yShift = 2.836596f;
-    float zShift = 2.5f;// 0.008552f;
+    float zShift = 2.5f;
+
+    public resetScene resetter;
 
     void Start()
     {
@@ -100,6 +105,7 @@ public class MaterialController : MonoBehaviour
         PAIR_COORDS = Mathf.CeilToInt(ReadFileData.attribCount / 2);
         vertsPerVector = PAIR_COORDS;
         vertsPerGLCLLine = ReadFileData.attribCount + 1;
+        cubeScales = new float[PAIR_COORDS];
 
         //pointHeight = new float[PAIR_COORDS, 4];
         aVals = new float[ReadFileData.attribCount];
@@ -128,13 +134,24 @@ public class MaterialController : MonoBehaviour
         {
             subCoordinateCubes[i] = Instantiate(prefabSubCoord);
             subCoordinateCubes[i].transform.position = curPos;
-            //HeightPlane = subCoordinateCubes[i].transform.GetChild(1).gameObject.GetComponent<Renderer>().material;
+
+            if (i != 1)
+            {
+                subCoordinateCubes[i].transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
+                cubeScales[i] = 0.2f;
+            }
+            else
+            {
+                cubeScales[i] = subCoordinateCubes[i].transform.localScale.z;
+            }
+
             if ((i + 1) % cubesPerRow == 0 /*&& i > 0*/)
             {
                 swapDir *= -1;
                 curPos += new Vector3(0, -7f, -9);
                 continue;
             }
+
             curPos += new Vector3(9f * swapDir, 0, 0);
         }
         int pointIndex = 0;
@@ -165,19 +182,10 @@ public class MaterialController : MonoBehaviour
 
     public void updateCubes()
     {
-        //rulePlaneC1.SetFloat("_TX", ruleC1[0]);
-        //rulePlaneC1.SetFloat("_BX", ruleC1[1]);
-        //rulePlaneC1.SetFloat("_TY", ruleC1[2]);
-        //rulePlaneC1.SetFloat("_BY", ruleC1[3]);
 
-        //rulePlaneC2.SetFloat("_TX", ruleC2[0]);
-        //rulePlaneC2.SetFloat("_BX", ruleC2[1]);
-        //rulePlaneC2.SetFloat("_TY", ruleC2[2]);
-        //rulePlaneC2.SetFloat("_BY", ruleC2[3]);
-
-        setHeightPlaneCorners();
-        normPerAttribData = normalize(data);
-        normAVals = normalize(aVals);
+        filteredData = ArrayFilter.FilterData(data, userRule);
+        normPerAttribData = normalize(filteredData);//X
+        normAVals = normalize(aVals);//X
 
         classLines();
     }
@@ -188,53 +196,62 @@ public class MaterialController : MonoBehaviour
         coordVertArr = new Vertex[ReadFileData.setCount * PAIR_COORDS * vertsPerCoord];
         glclVertArr = new Vertex[ReadFileData.setCount * PAIR_COORDS * vertsPerGLCLLine];
         int pointIndex = 0;
+        int fxiIndex = 0;
+
         //for each class
-        for (int i = 0; i < data.Length; i++)
+        for (int i = 0; i < filteredData.Length; i++)
+        {
+            //for each set
+            for (int j = 0; j < filteredData[i].Length; j++)
+            {
+                fxi[fxiIndex] = setFX(aVals, normPerAttribData, i, j);
+                fxiIndex++;
+            }
+        }
+        fxiIndex = 0;
+        float valueToCubeFraction = 5 / high_fx;
+
+        setHeightPlaneCorners(valueToCubeFraction);
+
+        //for each class
+        for (int i = 0; i < filteredData.Length; i++)
         {
             Vector3 classColor = classColors[i];
             //for each set
-            for (int j = 0; j < data[i].Length; j++)
+            for (int j = 0; j < filteredData[i].Length; j++)
             {
-                int fxiIndex = j + (i * ReadFileData.classCount);
-                fxi[fxiIndex] = setFX(aVals, data, i, j);
-                fxiParts[fxiIndex] = setFXParts(aVals, data, i, j);
-
                 //Material vec = VectorArr[vectorIndex].GetComponent<Renderer>().material;
-                //vec.SetColor("_Color", classColor);
-                bool skipNextMat = false;
-                bool outsideRules = false;
                 //for each sub-coordinate
                 for (int k = 0; k < PAIR_COORDS; k++)
                 {
+
                     int kInd = order[k * 2];
                     int kIndHigh = order[k * 2 + 1];
-                    coordPointArr[pointIndex].transform.localPosition = new Vector3((float)normPerAttribData[i][j][kInd] * X_SCALE - xShift, (float)normPerAttribData[i][j][kIndHigh] * Y_SCALE - yShift, (float)(fxi[fxiIndex] * VALUE_TO_CUBE_FRAC_SCALE) - zShift);
+                    coordPointArr[pointIndex].transform.localPosition = new Vector3((float)normPerAttribData[i][j][kInd] * X_SCALE - xShift, (float)normPerAttribData[i][j][kIndHigh] * Y_SCALE - yShift, (float)(fxi[fxiIndex] *  valueToCubeFraction - zShift));
                     Vector3 currentCoordLocal = coordPointArr[pointIndex].transform.localPosition;
                     Vector3 currentCoordGlobal = coordPointArr[pointIndex].transform.position;
 
                     //=============================GLCL=========================//
                     Vector3 curCoordXY = new Vector3(currentCoordLocal.x, currentCoordLocal.y, 0);
 
-                    setGLCLLines(subCoordinateCubes[k], curCoordXY, pointIndex * vertsPerGLCLLine, classColor, i, j, currentCoordGlobal);
+                    setGLCLLines(subCoordinateCubes[k], curCoordXY, pointIndex * vertsPerGLCLLine, classColor, i, j, currentCoordGlobal, cubeScales[k], valueToCubeFraction);
 
                     //===========================Vector=========================//
-
                     vectorVertArr[pointIndex].pos = currentCoordGlobal;
                     vectorVertArr[pointIndex].color = classColor;
+
                     //==========================coordLines===============================//
-
-
-                    setCoordPlane(currentCoordLocal, subCoordinateCubes[k], (float)(c * high_fx) * VALUE_TO_CUBE_FRAC_SCALE - 2.5f, pointIndex * vertsPerCoord);
+                    setCoordPlane(currentCoordLocal, subCoordinateCubes[k], (float)(c * high_fx) * valueToCubeFraction - 2.5f, pointIndex * vertsPerCoord);
 
                     pointIndex++;
                 }
-                
+                fxiIndex++;
             }
         }
-        DisplayData();
+        DisplayfilteredData();
     }
 
-    void DisplayData()
+    void DisplayfilteredData()
     {
         vectorVertBuff = new ComputeBuffer(vectorVertArr.Length, vertexSize);
         vectorVertBuff.SetData(vectorVertArr);
@@ -267,7 +284,7 @@ public class MaterialController : MonoBehaviour
         Graphics.DrawProceduralNow(MeshTopology.LineStrip, vertsPerGLCLLine, ReadFileData.setCount * PAIR_COORDS);
     }
 
-    void setGLCLLines(GameObject cube, Vector3 curCoordXY, int index, Vector3 classColor, int dataI, int dataJ, Vector3 finalPoint)
+    void setGLCLLines(GameObject cube, Vector3 curCoordXY, int index, Vector3 classColor, int filteredDataI, int filteredDataJ, Vector3 finalPoint, float cubeScale, float valueToCubeFraction)
     {
         glclVertArr[index].color = classColor;
 
@@ -275,81 +292,61 @@ public class MaterialController : MonoBehaviour
         glclVertArr[index].pos = cube.transform.localToWorldMatrix.MultiplyPoint(glclVertArr[index].pos);
         for (int i = 0; i < vertsPerGLCLLine - 1; i++)
         {
-            glclVertArr[index + i + 1].pos = setGLCLPoint(glclVertArr[index + i].pos, data[dataI][dataJ][order[i]], aVals[order[i]], normAVals[order[i]]);
+            glclVertArr[index + i + 1].pos = setGLCLPoint(glclVertArr[index + i].pos, normPerAttribData[filteredDataI][filteredDataJ][order[i]], aVals[order[i]], normAVals[order[i]], cubeScale, valueToCubeFraction);
             glclVertArr[index + i + 1].color = classColor;
         }
     }
 
-    Vector3 setGLCLPoint( Vector3 endP, float data, float aval, float normAval)
+    Vector3 setGLCLPoint( Vector3 endP, float filteredData, float aval, float normAval, float cubeScale, float valueToCubeFraction)
     {
-        float height = (float)(aval * data);
+        float height = (float)(aval * filteredData);
         float topRAngle = Mathf.Acos(normAval);
-        float bottomLength = data * Mathf.Sin(topRAngle);
-        endP += new Vector3(bottomLength, height, 0) * (VALUE_TO_CUBE_FRAC_SCALE * 1.225962f); //1.225962 is the scale of the cubes
+        float bottomLength = filteredData * Mathf.Sin(topRAngle);
+        endP += new Vector3(bottomLength, height, 0) * (valueToCubeFraction * cubeScale);
 
         return endP;
     }
 
-    float setFX(float[] a, float[][][] x, int c, int set)
+    float setFX(float[] a, float[][][] x, int dataClass, int dataSet)
     {
-        float f_x = 0;// a[0] * x[c][set][0] + a[1] * x[c][set][1] + a[2] * x[c][set][2] + a[3] * x[c][set][3];
+        float f_x = 0;
         for(int i = 0; i < ReadFileData.attribCount; i++)
         {
             float A = a[order[i]];
-            f_x += A * x[c][set][order[i]];
+            f_x += A * x[dataClass][dataSet][order[i]];
         }
         if(f_x > high_fx)
         {
             high_fx = f_x;
-            VALUE_TO_CUBE_FRAC_SCALE = 5f / high_fx;
         }
         return f_x;
     }
 
-    float[] setFXParts(float[] a, float[][][] x, int c, int set)
-    {
-        float[] f_x_PerSubCoord = new float[PAIR_COORDS];// { a[0] * x[c][set][0] + a[1] * x[c][set][1], a[2] * x[c][set][2] + a[3] * x[c][set][3]};
-        int i = 0;
-        int n = 0;
-        while(i < PAIR_COORDS)
-        {
-            f_x_PerSubCoord[n] = a[order[i]] * x[c][set][order[i]] + a[order[i + 1]] * x[c][set][order[i + 1]];
-            i += 2;
-            n += 1;
-        }
+    //float[] setFXParts(float[] a, float[][][] x, int c, int set)
+    //{
+    //    float[] f_x_PerSubCoord = new float[PAIR_COORDS];
+    //    int i = 0;
+    //    int n = 0;
+    //    while(i < PAIR_COORDS)
+    //    {
+    //        f_x_PerSubCoord[n] = a[order[i]] * x[c][set][order[i]] + a[order[i + 1]] * x[c][set][order[i + 1]];
+    //        i += 2;
+    //        n += 1;
+    //    }
 
-        return f_x_PerSubCoord;
-    }
+    //    return f_x_PerSubCoord;
+    //}
 
-    //finds the rest of the height function to set f(x) to zero. For example, f_12(X) = a1x1 + a2x2 + restOfVectors - f(x)= 0. This finds restOfVectors for f_12(x), f_34(x), f_56(x). 
-    /*double[] setRestOfFunctions(double[] a, double[] x)
-    {
-        double[] rof = new double[3];//rest of function
-        rof[0] = (a[2] * x[2] + a[3] * x[3] + a[4] * x[4] + a[5] * x[5]); //f12
-        rof[1] = (a[0] * x[0] + a[1] * x[1] + a[4] * x[4] + a[5] * x[5]); //f34
-        rof[2] = (a[0] * x[0] + a[1] * x[1] + a[2] * x[2] + a[3] * x[3]); //f56
-        return rof;
-    }*/
     //sets each corner of the yellow height planes at position (0,0), (0,1) (1,1), (1,0) for each subcoordinate
-    void setHeightPlaneCorners()
+    void setHeightPlaneCorners(float VALUE_TO_CUBE_FRAC_SCALE)
     {
         float newC = (float)-(c * high_fx) * VALUE_TO_CUBE_FRAC_SCALE; //for fitting purposes into the cubes of the subcoordinates. Otherwise it does not match Fx in heigh
-        //pointHeight[i, 0] = newC;// setPointHeight(0, 0, aVals[2 * i], aVals[2 * i + 1], restOfFunction[i]); //(0,0)
-        //pointHeight[i, 1] = newC;// setPointHeight(1, 0, aVals[2 * i], aVals[2 * i + 1], restOfFunction[i]); //(1,0)
-        //pointHeight[i, 2] = newC;// setPointHeight(1, 1, aVals[2 * i], aVals[2 * i + 1], restOfFunction[i]); //(1,1)
-        //pointHeight[i, 3] = newC;// setPointHeight(0, 1, aVals[2 * i], aVals[2 * i + 1], restOfFunction[i]); //(0,1);
+
         HeightPlane.SetFloat("_Pos0", newC);
         HeightPlane.SetFloat("_Pos1", newC);
         HeightPlane.SetFloat("_Pos2", newC);
         HeightPlane.SetFloat("_Pos3", newC);
     }
-
-    //sets the height of a corner for the height plane.
-    /*double setPointHeight(double x1, double x2, double a1, double a2, double rof)
-    {
-        double height = (x1 * a1 + x2 * a2 + rof - fxi) * 2.5f;// * 5;
-        return height;
-    }*/
 
     //sets the values for coordPlane shader
     //need index for coord arr
@@ -429,6 +426,12 @@ public class MaterialController : MonoBehaviour
     }
 
     //These set of functions read in the A vector from the UI, one element at a time
+    public void readRule(string rule)
+    {
+        userRule = rule;
+        resetter.resetSceneVisual();
+    }
+
     public void readA(float[] aInp)
     {
         aVals = aInp;
@@ -486,31 +489,6 @@ public class MaterialController : MonoBehaviour
             ruleC2[3] = float.Parse(yInp);
     }
 
-    /*//These set of functions read in the X vector from the UI, one element at a time
-    public void readX(string xInp)
-    {
-       xVals[0] = double.Parse(xInp);
-    }
-    public void readY(string yInp)
-    {
-        xVals[1] = double.Parse(yInp);
-    }
-    public void readZ(string zInp)
-    {
-        xVals[2] = double.Parse(zInp);
-    }
-    public void readW(string wInp)
-    {
-        xVals[3] = double.Parse(wInp);
-    }
-    public void readV(string vInp)
-    {
-        xVals[4] = double.Parse(vInp);
-    }
-    public void readU(string uInp)
-    {
-        xVals[5] = double.Parse(uInp);
-    }*/
     private void OnDestroy()
     {
         vectorVertBuff.Release();
