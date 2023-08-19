@@ -8,6 +8,7 @@ Shader "Custom/coordCompute"
     SubShader
     {
         Tags { "Queue" = "Transparent" }
+        Blend SrcAlpha OneMinusSrcAlpha
         LOD 100
 
         Pass

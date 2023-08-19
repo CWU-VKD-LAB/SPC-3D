@@ -5,16 +5,49 @@ using UnityEngine;
 
 public class ArrayFilter : MonoBehaviour
 {
+    static public bool[] involvedAttribute;
+
     static public float[][][] FilterData(float[][][] dataArray, string userConditionString)
     {
+        involvedAttribute = new bool[ReadFileData.attribCount];
+        for (int i = 0; i < involvedAttribute.Length; i++)
+        {
+            involvedAttribute[i] = false;
+        }
+
         if (userConditionString.Equals(string.Empty))
         {
+            setInvolvedAttributesToAllTrue();
             return CopyArray(dataArray);
         }
 
+        float[][][] combinedResults = null;
+
+        string[] ruleStrings = userConditionString.Split('+');
+
+        foreach (string ruleString in ruleStrings)
+        {
+            string rule = ruleString.Trim();
+            float[][][] filteredData = ApplyRule(dataArray, rule);
+
+            if (combinedResults == null)
+            {
+                combinedResults = filteredData;
+            }
+            else
+            {
+                combinedResults = CombineResults(combinedResults, filteredData);
+            }
+        }
+
+        return combinedResults;
+    }
+
+    static float[][][] ApplyRule(float[][][] dataArray, string rule)
+    {
         float[][][] copiedArray = CopyArray(dataArray);
 
-        string[] orConditions = userConditionString.Split('^');
+        string[] orConditions = rule.Split('|');
         List<List<Func<float[], bool>>> conditionGroups = new List<List<Func<float[], bool>>>();
 
         foreach (string orCondition in orConditions)
@@ -39,42 +72,120 @@ public class ArrayFilter : MonoBehaviour
             ).ToArray();
         }
 
-        foreach (float[][] record in copiedArray)
+        return copiedArray;
+    }
+
+    static float[][][] CombineResults(float[][][] result1, float[][][] result2)
+    {
+        if (result1.Length != result2.Length)
         {
-            foreach (float[] innerRecord in record)
-            {
-                Debug.Log($"Filtered Record: [{string.Join(", ", innerRecord)}]");
-            }
+            Debug.LogError("Both result arrays should have the same number of classes.");
+            return null;
         }
 
-        return copiedArray;
+        float[][][] combinedResults = new float[result1.Length][][];
+
+        for (int i = 0; i < result1.Length; i++)
+        {
+            HashSet<float[]> uniqueCases = new HashSet<float[]>(new ArrayEqualityComparer());
+            uniqueCases.UnionWith(result1[i]);
+            uniqueCases.UnionWith(result2[i]);
+
+            combinedResults[i] = uniqueCases.ToArray();
+        }
+
+        return combinedResults;
+    }
+
+    class ArrayEqualityComparer : IEqualityComparer<float[]>
+    {
+        public bool Equals(float[] x, float[] y)
+        {
+            if (x.Length != y.Length)
+                return false;
+
+            for (int i = 0; i < x.Length; i++)
+            {
+                if (x[i] != y[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        public int GetHashCode(float[] obj)
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (float value in obj)
+                {
+                    hash = hash * 23 + value.GetHashCode();
+                }
+                return hash;
+            }
+        }
     }
 
     static bool EvaluateCondition(float[] dataRecord, string condition)
     {
-        string[] tokens = condition.Split('=');
-        string indexString = tokens[0].Trim().Substring(1); // Extract index from Xn
-        int index;
+        string[] operators = { "!=", "=" };
 
-        if (int.TryParse(indexString, out index))
+        foreach (string op in operators)
         {
-            index--; // Adjust index to zero-based
-            float value;
+            string[] tokens = condition.Split(new string[] { op }, StringSplitOptions.None);
 
-            if (float.TryParse(tokens[1].Trim(), out value))
+            if (tokens.Length == 2)
             {
-                return index >= 0 && index < dataRecord.Length && dataRecord[index] == value;
-            }
-            else
-            {
-                Debug.LogError($"Invalid value format in condition: {condition}");
-                return false;
+                string attributeToken = tokens[0].Trim();
+                string valueToken = tokens[1].Trim();
+
+                if (attributeToken.StartsWith("X") && int.TryParse(attributeToken.Substring(1), out int index))
+                {
+                    index--;
+                    if (index + 1 <= involvedAttribute.Length)
+                        involvedAttribute[index] = true;
+                    if (index >= 0 && index < dataRecord.Length)
+                    {
+                        if (float.TryParse(valueToken, out float value))
+                        {
+                            switch (op)
+                            {
+                                case "=":
+                                    return dataRecord[index] == value;
+                                case "!=":
+                                    return dataRecord[index] != value;
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogError($"Invalid value format in condition: {condition}");
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log($"Invalid attribute index in condition: {condition}");
+                        return false;
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"Invalid attribute format in condition: {condition}");
+                    return false;
+                }
             }
         }
-        else
+
+        Debug.LogError($"Invalid condition format: {condition}");
+        return false;
+    }
+
+    static void setInvolvedAttributesToAllTrue()
+    {
+        for (int i = 0; i < involvedAttribute.Length; i++)
         {
-            Debug.LogError($"Invalid index format in condition: {condition}");
-            return false;
+            involvedAttribute[i] = true;
         }
     }
 
@@ -85,6 +196,7 @@ public class ArrayFilter : MonoBehaviour
         for (int i = 0; i < source.Length; i++)
         {
             copy[i] = new float[source[i].Length][];
+
             for (int j = 0; j < source[i].Length; j++)
             {
                 copy[i][j] = new float[source[i][j].Length];

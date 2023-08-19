@@ -55,11 +55,16 @@ public class resetScene : MonoBehaviour
         GameObject[] buttons = GameObject.FindGameObjectsWithTag("button");
         foreach (GameObject button in buttons)
             Destroy(button);
+        GameObject[] ruleTexts = GameObject.FindGameObjectsWithTag("ruleText");
+        foreach (GameObject ruleText in ruleTexts)
+            Destroy(ruleText);
 
         controller.cubesPerRow = cubeCount;
         controller.init(true);
         valueUpdater.init();
         valueUpdater.updateVals();
+        controller.clearRule();
+        controller.readRule("");
         //resetSceneVisual();
     }
 }

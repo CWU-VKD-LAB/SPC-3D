@@ -5115,6 +5115,18 @@ PrefabInstance:
       value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 7682521345298181381, guid: e60649454126cf54db88efebad707be1, type: 3}
+      propertyPath: buttonParent
+      value: 
+      objectReference: {fileID: 1998303817}
+    - target: {fileID: 7682521345298181381, guid: e60649454126cf54db88efebad707be1, type: 3}
+      propertyPath: userRuleText
+      value: 
+      objectReference: {fileID: 1520013868}
+    - target: {fileID: 7682521345298181381, guid: e60649454126cf54db88efebad707be1, type: 3}
+      propertyPath: ruleStatPrefab
+      value: 
+      objectReference: {fileID: 6844315734762035330, guid: 80af77190e785574296ec9891db87257, type: 3}
+    - target: {fileID: 7682521345298181381, guid: e60649454126cf54db88efebad707be1, type: 3}
       propertyPath: visTogElements
       value: 
       objectReference: {fileID: 1339098779}

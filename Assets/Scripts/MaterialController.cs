@@ -43,6 +43,7 @@ public class MaterialController : MonoBehaviour
     public Material vectorMat;
     public Material coordMat;
     public Material glclMat;
+    public InputField userRuleText;
 
     GameObject[] subCoordinateCubes;
 
@@ -71,6 +72,8 @@ public class MaterialController : MonoBehaviour
     private float[,] pointHeight;// = new float[100, 100];
     public int[] order;
     public int cubesPerRow = 3;
+    public GameObject ruleStatPrefab;
+    public GameObject buttonParent;
     
     float[] cubeScales;
 
@@ -87,10 +90,14 @@ public class MaterialController : MonoBehaviour
 
     public void init(bool newScene)
     {
-        high_fx = 0;
 
-        if(newScene)
+        if (newScene)
+        {
+            high_fx = 0;
             order = new int[ReadFileData.attribCount];
+            aVals = new float[ReadFileData.attribCount];
+            normAVals = new float[ReadFileData.attribCount];
+        }
         int nProcessID = Process.GetCurrentProcess().Id;
 
         Mesh mesh = new Mesh();
@@ -108,8 +115,7 @@ public class MaterialController : MonoBehaviour
         cubeScales = new float[PAIR_COORDS];
 
         //pointHeight = new float[PAIR_COORDS, 4];
-        aVals = new float[ReadFileData.attribCount];
-        normAVals = new float[ReadFileData.attribCount];
+       
 
         for (int i = 0; i < ReadFileData.attribCount; i++)
         {
@@ -130,20 +136,11 @@ public class MaterialController : MonoBehaviour
         int swapDir = 1;
         Vector3 curPos = new Vector3(0, 0, 0);
         HeightPlane = prefabSubCoord.transform.GetChild(1).gameObject.GetComponent<Renderer>().sharedMaterial;
+
         for (int i = 0; i < PAIR_COORDS; i++)
         {
             subCoordinateCubes[i] = Instantiate(prefabSubCoord);
             subCoordinateCubes[i].transform.position = curPos;
-
-            if (i != 1)
-            {
-                subCoordinateCubes[i].transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-                cubeScales[i] = 0.2f;
-            }
-            else
-            {
-                cubeScales[i] = subCoordinateCubes[i].transform.localScale.z;
-            }
 
             if ((i + 1) % cubesPerRow == 0 /*&& i > 0*/)
             {
@@ -182,14 +179,107 @@ public class MaterialController : MonoBehaviour
 
     public void updateCubes()
     {
-
         filteredData = ArrayFilter.FilterData(data, userRule);
+        GameObject[] ruleTexts = GameObject.FindGameObjectsWithTag("ruleText");
+        foreach (GameObject ruleText in ruleTexts)
+            Destroy(ruleText);
+        setRuleStatText();
         normPerAttribData = normalize(filteredData);//X
         normAVals = normalize(aVals);//X
-
+        setCubeScale();
         classLines();
     }
 
+    void setRuleStatText()
+    {
+        bool changeInData = false;
+        for(int i = 0; i < ReadFileData.classCount; i++)
+        {
+            if(data[i].Length != filteredData[i].Length)
+            {
+                changeInData = true;
+            }
+        }
+        if(!changeInData)
+        {
+            return;
+        }
+        GameObject[] classStats = new GameObject[ReadFileData.classCount];
+
+        int totalFilteredSets = 0;
+        int totalUnfiliteredSets = 0;
+        for (int i = 0; i < classStats.Length; i++)
+        {
+            totalFilteredSets += filteredData[i].Length;
+            totalUnfiliteredSets += data[i].Length;
+        }
+
+        GameObject TotalCoverage = Instantiate(ruleStatPrefab, buttonParent.transform);
+        float totalCoverage = (float)totalFilteredSets / (float)totalUnfiliteredSets;
+        string totalCoverageText = "Rule Total coverage: " + totalCoverage * 100 + "%";
+        TotalCoverage.GetComponent<Text>().text = totalCoverageText;
+
+        for (int i = 0; i < classStats.Length; i++)
+        {
+            classStats[i] = Instantiate(ruleStatPrefab, buttonParent.transform);
+
+            classStats[i].transform.position += new Vector3(0, -60 * (i + 1), 0);
+
+            float coverageOfClass = (float)filteredData[i].Length / (float)data[i].Length;
+            string coverageText = "Class " + (i + 1) + " coverage: " + coverageOfClass * 100 + "%";
+            float precisionOfClass = (float)filteredData[i].Length / (float)totalFilteredSets;
+            string precisionText = "Class " + (i + 1) + " precision: " + precisionOfClass * 100 + "%";
+            classStats[i].GetComponent<Text>().text = coverageText + "\n" + precisionText;
+        }
+    }
+
+    void setCubeScale()
+    {
+        bool[] cubesToBeScaledDown = new bool[PAIR_COORDS];
+
+        for (int j = 0; j < PAIR_COORDS; j++)
+        {
+            cubesToBeScaledDown[j] = true;
+        }
+        bool[] involvedAttribute = ArrayFilter.involvedAttribute;
+        if (involvedAttribute == null)
+        {
+            involvedAttribute = new bool[ReadFileData.attribCount];
+            for (int j = 0; j < ReadFileData.attribCount; j++)
+            {
+                involvedAttribute[j] = true;
+            }
+        }
+        for (int j = 0; j < ReadFileData.attribCount; j++)
+        {
+            if (involvedAttribute[j])
+            {
+                for (int k = 0; k < ReadFileData.attribCount; k++)
+                {
+                    if (order[k] == j)
+                    {
+                        int cubeIndex = Mathf.FloorToInt(k / 2);
+                        cubesToBeScaledDown[cubeIndex] = false;
+                    }
+                }
+            }
+        }
+
+        float cubeScaleValue = 0.5f;
+
+        for (int i = 0; i < PAIR_COORDS; i++)
+        {
+            if (cubesToBeScaledDown[i])
+            {
+                subCoordinateCubes[i].transform.localScale = new Vector3(cubeScaleValue, cubeScaleValue, cubeScaleValue);
+                cubeScales[i] = cubeScaleValue;
+            }
+            else
+            {
+                cubeScales[i] = subCoordinateCubes[i].transform.localScale.z;
+            }
+        }
+    }
     void classLines()
     {
         vectorVertArr = new Vertex[ReadFileData.setCount * PAIR_COORDS];
@@ -322,21 +412,6 @@ public class MaterialController : MonoBehaviour
         return f_x;
     }
 
-    //float[] setFXParts(float[] a, float[][][] x, int c, int set)
-    //{
-    //    float[] f_x_PerSubCoord = new float[PAIR_COORDS];
-    //    int i = 0;
-    //    int n = 0;
-    //    while(i < PAIR_COORDS)
-    //    {
-    //        f_x_PerSubCoord[n] = a[order[i]] * x[c][set][order[i]] + a[order[i + 1]] * x[c][set][order[i + 1]];
-    //        i += 2;
-    //        n += 1;
-    //    }
-
-    //    return f_x_PerSubCoord;
-    //}
-
     //sets each corner of the yellow height planes at position (0,0), (0,1) (1,1), (1,0) for each subcoordinate
     void setHeightPlaneCorners(float VALUE_TO_CUBE_FRAC_SCALE)
     {
@@ -432,6 +507,11 @@ public class MaterialController : MonoBehaviour
         resetter.resetSceneVisual();
     }
 
+    public void clearRule()
+    {
+        userRuleText.text = "";
+    }
+
     public void readA(float[] aInp)
     {
         aVals = aInp;
@@ -443,50 +523,6 @@ public class MaterialController : MonoBehaviour
     {
         c = cInp;
         //updateCubes();
-    }
-
-    //reads the rules for coord 1
-    public void readX1C1(string xInp)
-    {
-        if (float.TryParse(xInp, out _))
-            ruleC1[0] = float.Parse(xInp);
-    }
-    public void readX2C1(string xInp)
-    {
-        if (float.TryParse(xInp, out _))
-            ruleC1[1] = float.Parse(xInp);
-    }
-    public void readY1C1(string yInp)
-    {
-        if (float.TryParse(yInp, out _))
-            ruleC1[2] = float.Parse(yInp);
-    }
-    public void readY2C1(string yInp)
-    {
-        if (float.TryParse(yInp, out _))
-            ruleC1[3] = float.Parse(yInp);
-    }
-
-    //reads the rules for coord2
-    public void readX1C2(string xInp)
-    {
-        if (float.TryParse(xInp, out _))
-            ruleC2[0] = float.Parse(xInp);
-    }
-    public void readX2C2(string xInp)
-    {
-        if (float.TryParse(xInp, out _))
-            ruleC2[1] = float.Parse(xInp);
-    }
-    public void readY1C2(string yInp)
-    {
-        if (float.TryParse(yInp, out _))
-            ruleC2[2] = float.Parse(yInp);
-    }
-    public void readY2C2(string yInp)
-    {
-        if (float.TryParse(yInp, out _))
-            ruleC2[3] = float.Parse(yInp);
     }
 
     private void OnDestroy()
